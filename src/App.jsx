@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+// [ROUTER CHANGE] Import Router hooks
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from "react-router-dom";
 
 // --- UTILS ---
 function cn(...inputs) {
@@ -10,10 +12,6 @@ function cn(...inputs) {
 }
 
 // --- CONFIGURATION ---
-// [SUPABASE EXPLANATION]
-// This initializes the client. It is like opening a connection pool in a backend app.
-// The ANON_KEY is safe to expose because we use "Row Level Security" (RLS) in Postgres
-// to restrict what this key can actually do based on who is logged in.
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -55,20 +53,15 @@ const Icons = {
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeBoard, setActiveBoard] = useState(null);
+  
+  // [ROUTER CHANGE] We don't need activeBoard state anymore, the URL handles it.
 
   useEffect(() => {
-    // [SUPABASE EXPLANATION]
-    // Checks if the user has a valid JWT (JSON Web Token) in LocalStorage.
-    // [TRADITIONAL ROUTE] GET /api/auth/me or GET /api/verify-token
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // [SUPABASE EXPLANATION]
-    // A real-time listener. If the token expires or the user logs out in another tab,
-    // this triggers automatically. You don't need to write refresh token logic.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setLoading(false);
@@ -87,24 +80,36 @@ export default function App() {
     </div>
   );
 
-  if (!session) return <AuthScreen />;
-
+  // [ROUTER CHANGE] Using BrowserRouter and Routes
   return (
-    <AnimatePresence mode="wait">
-      {activeBoard ? (
-        <BoardView key="board-view" session={session} board={activeBoard} onBack={() => setActiveBoard(null)} />
-      ) : (
-        <BoardList key="board-list" session={session} onSelectBoard={setActiveBoard} />
-      )}
-    </AnimatePresence>
+    <BrowserRouter>
+      <Routes>
+        <Route 
+          path="/auth" 
+          element={!session ? <AuthScreen /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/" 
+          element={session ? <BoardList session={session} /> : <Navigate to="/auth" />} 
+        />
+        <Route 
+          path="/board/:boardId" 
+          element={session ? <BoardView session={session} /> : <Navigate to="/auth" />} 
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
 // --- 1. BOARDS LIST COMPONENT ---
-function BoardList({ session, onSelectBoard }) {
+// [ROUTER CHANGE] Removed 'onSelectBoard' prop
+function BoardList({ session }) {
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  
+  // [ROUTER CHANGE] Hook for navigation
+  const navigate = useNavigate();
 
   const { user } = session;
   const avatarUrl = user.user_metadata?.avatar_url;
@@ -122,18 +127,6 @@ function BoardList({ session, onSelectBoard }) {
   useEffect(() => { fetchBoards(); }, []);
 
   const fetchBoards = async () => {
-    // [SUPABASE EXPLANATION]
-    // .from('boards') -> SELECT FROM boards table
-    // .select('*') -> Select all columns
-    // .order(...) -> standard SQL ORDER BY
-    //
-    // [IMPORTANT]: Notice we didn't add `.eq('user_id', session.user.id)`.
-    // In Supabase, we configure a Policy on the server (RLS) that says:
-    // "Users can only see their own rows". So this query automatically applies
-    // `WHERE user_id = current_user` on the backend!
-    //
-    // [SQL EQUIVALENT] SELECT * FROM boards ORDER BY created_at DESC;
-    // [TRADITIONAL ROUTE] GET /api/boards
     const { data, error } = await supabase
       .from('boards')
       .select('*')
@@ -146,13 +139,6 @@ function BoardList({ session, onSelectBoard }) {
     e.preventDefault();
     if (!newBoardName.trim()) return;
 
-    // [SUPABASE EXPLANATION]
-    // .insert([...]) -> INSERT INTO boards ...
-    // .select() -> RETURNING * (This makes Supabase return the newly created row immediately)
-    //
-    // [SQL EQUIVALENT] 
-    // INSERT INTO boards (name, user_id) VALUES ('Project X', '123') RETURNING *;
-    // [TRADITIONAL ROUTE] POST /api/boards
     const { data, error } = await supabase
       .from('boards')
       .insert([{ name: newBoardName, user_id: session.user.id }])
@@ -169,16 +155,7 @@ function BoardList({ session, onSelectBoard }) {
     e.stopPropagation();
     if (!window.confirm("Delete this board?")) return;
 
-    // [SUPABASE EXPLANATION]
-    // Deleting child tasks first (if you didn't set "ON DELETE CASCADE" in SQL)
-    // .delete().eq('board_id', id)
-    //
-    // [SQL EQUIVALENT] DELETE FROM tasks WHERE board_id = '123';
-    // [TRADITIONAL ROUTE] DELETE /api/boards/:id/tasks (or handled by DB constraint)
     await supabase.from('tasks').delete().eq('board_id', id); 
-    
-    // [SQL EQUIVALENT] DELETE FROM boards WHERE id = '123';
-    // [TRADITIONAL ROUTE] DELETE /api/boards/:id
     await supabase.from('boards').delete().eq('id', id);
 
     setBoards(boards.filter(b => b.id !== id));
@@ -213,10 +190,6 @@ function BoardList({ session, onSelectBoard }) {
            
            <div className="h-4 w-px bg-stone-300 mx-1"></div>
            
-           {/* [SUPABASE EXPLANATION] 
-               Destroys the JWT session locally and on server.
-               [TRADITIONAL ROUTE] POST /api/logout
-           */}
            <button onClick={() => supabase.auth.signOut()} className="text-xs text-stone-500 hover:text-red-500 font-medium transition-colors">
              Sign Out
            </button>
@@ -224,7 +197,6 @@ function BoardList({ session, onSelectBoard }) {
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Create Button */}
         <motion.div 
           layout
           onClick={() => setIsCreating(true)}
@@ -255,7 +227,6 @@ function BoardList({ session, onSelectBoard }) {
           )}
         </motion.div>
 
-        {/* Board Cards */}
         <AnimatePresence>
           {boards.map((board, i) => (
             <motion.div 
@@ -265,7 +236,8 @@ function BoardList({ session, onSelectBoard }) {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ delay: i * 0.05 }}
               key={board.id} 
-              onClick={() => onSelectBoard(board)}
+              // [ROUTER CHANGE] Navigate to board route on click
+              onClick={() => navigate(`/board/${board.id}`)}
               className="group relative flex flex-col justify-between h-48 p-8 rounded-3xl bg-white shadow-[0_2px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-stone-100 hover:-translate-y-1 transition-all cursor-pointer overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-32 bg-gradient-to-br from-transparent to-stone-50 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -301,11 +273,17 @@ function BoardList({ session, onSelectBoard }) {
 }
 
 // --- 2. BOARD VIEW COMPONENT ---
-function BoardView({ session, board, onBack }) {
+// [ROUTER CHANGE] Removed 'board' prop, we fetch it via URL now
+function BoardView({ session }) {
   const [tasks, setTasks] = useState([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [activeColumn, setActiveColumn] = useState(null);
   
+  // [ROUTER CHANGE] New state for the board data since we don't get it as a prop on refresh
+  const [board, setBoard] = useState(null); 
+  const { boardId } = useParams();
+  const navigate = useNavigate();
+
   const { user } = session;
   const avatarUrl = user.user_metadata?.avatar_url;
   const displayUsername = 
@@ -314,19 +292,26 @@ function BoardView({ session, board, onBack }) {
     user.user_metadata?.username || 
     "User";
 
-  useEffect(() => { fetchTasks(); }, [board.id]);
+  // [ROUTER CHANGE] Fetch board details on mount (handles page refresh)
+  useEffect(() => {
+    const getBoard = async () => {
+        const { data } = await supabase.from('boards').select('*').eq('id', boardId).single();
+        if(data) setBoard(data);
+        else navigate('/'); // Redirect if board doesn't exist
+    };
+    getBoard();
+  }, [boardId, navigate]);
+
+  useEffect(() => { 
+    if(boardId) fetchTasks(); 
+  }, [boardId]);
 
   const fetchTasks = async () => {
-    // [SUPABASE EXPLANATION]
-    // Filtering data.
-    // .eq('board_id', board.id) -> WHERE board_id = ...
-    //
-    // [SQL EQUIVALENT] SELECT * FROM tasks WHERE board_id = '123' ORDER BY created_at ASC;
-    // [TRADITIONAL ROUTE] GET /api/boards/123/tasks
+    // [ROUTER CHANGE] Use boardId from params
     const { data } = await supabase
       .from('tasks')
       .select('*')
-      .eq('board_id', board.id)
+      .eq('board_id', boardId)
       .order('created_at', { ascending: true });
     
     setTasks(data || []);
@@ -335,16 +320,13 @@ function BoardView({ session, board, onBack }) {
   const handleAddTask = async (columnId) => {
     if (!newTaskTitle.trim()) return;
 
-    // [SUPABASE EXPLANATION]
-    // Inserting a new task linked to the user and board.
-    // [SQL EQUIVALENT] INSERT INTO tasks (title, status...) VALUES (...) RETURNING *;
-    // [TRADITIONAL ROUTE] POST /api/tasks
+    // [ROUTER CHANGE] Use boardId from params
     const { data, error } = await supabase
       .from('tasks')
       .insert([{ 
         title: newTaskTitle, 
         user_id: session.user.id, 
-        board_id: board.id, 
+        board_id: boardId, 
         status: columnId 
     }])
       .select();
@@ -362,26 +344,21 @@ function BoardView({ session, board, onBack }) {
     if (nextIndex < 0 || nextIndex >= WORKFLOW.length) return;
 
     const newStatus = WORKFLOW[nextIndex].id;
-    // 1. Optimistic UI Update (Update screen instantly)
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
-    
-    // 2. Database Update
-    // [SUPABASE EXPLANATION]
-    // .update({ status: ... }) -> UPDATE tasks SET status = ...
-    // .eq('id', task.id)       -> WHERE id = ...
-    //
-    // [SQL EQUIVALENT] UPDATE tasks SET status = 'done' WHERE id = '999';
-    // [TRADITIONAL ROUTE] PATCH /api/tasks/999
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
   };
 
   const deleteTask = async (id) => {
     setTasks(prev => prev.filter(t => t.id !== id));
-    
-    // [SQL EQUIVALENT] DELETE FROM tasks WHERE id = '999';
-    // [TRADITIONAL ROUTE] DELETE /api/tasks/999
     await supabase.from('tasks').delete().eq('id', id);
   };
+
+  // [ROUTER CHANGE] Show loading if board data isn't fetched yet
+  if (!board) return (
+    <div className="flex h-screen items-center justify-center bg-[#FDFDFD]">
+        <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-800 rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
     <motion.div 
@@ -390,7 +367,8 @@ function BoardView({ session, board, onBack }) {
     >
       <header className="flex-none flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-xl border-b border-stone-100 z-50 sticky top-0">
         <div className="flex items-center gap-6">
-          <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-xl text-stone-500 transition-colors group">
+          {/* [ROUTER CHANGE] onBack uses navigate('/') */}
+          <button onClick={() => navigate('/')} className="p-2 hover:bg-stone-100 rounded-xl text-stone-500 transition-colors group">
             <Icons.Back className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
           </button>
           <div>
@@ -506,14 +484,6 @@ function AuthScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // [SUPABASE EXPLANATION]
-  // This handles the entire OAuth flow: 
-  // 1. Redirects user to Google/GitHub
-  // 2. User consents
-  // 3. User redirected back to your site
-  // 4. Supabase extracts the code from the URL and creates a session
-  // 
-  // [TRADITIONAL ROUTE] You would need GET /api/auth/google, callback routes, strategy config (Passport.js), etc.
   const handleOAuthLogin = async (provider) => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -530,9 +500,6 @@ function AuthScreen() {
     setLoading(true);
     const fakeEmail = `${username.trim().toLowerCase()}@board.local`; 
 
-    // [SUPABASE EXPLANATION]
-    // Standard email/password login.
-    // [TRADITIONAL ROUTE] POST /api/login or POST /api/register
     const { error } = isLogin 
       ? await supabase.auth.signInWithPassword({ email: fakeEmail, password })
       : await supabase.auth.signUp({ 
@@ -618,4 +585,3 @@ function AuthScreen() {
     </div>
   );
 }
-
