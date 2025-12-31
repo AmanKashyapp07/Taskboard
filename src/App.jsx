@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-// [ROUTER CHANGE] Import Router hooks
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from "react-router-dom";
 
 // --- UTILS ---
@@ -11,18 +10,54 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+// --- ANIMATION CONSTANTS (SMOOTHER) ---
+// Lower stiffness = softer, slower slide. Higher damping = less bouncy.
+const SMOOTH_SPRING = { type: "spring", stiffness: 150, damping: 25, mass: 1 };
+
 // --- CONFIGURATION ---
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-// --- THEME CONFIG ---
+// --- THEME CONFIG (DARK MODE) ---
 const WORKFLOW = [
-  { id: 'backlog', label: 'Backlog', bg: 'bg-stone-50', border: 'border-stone-200', text: 'text-stone-600', dot: 'bg-stone-400' },
-  { id: 'todo',    label: 'To Do',   bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-600',  dot: 'bg-blue-500' },
-  { id: 'review',  label: 'Review',  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-600', dot: 'bg-amber-500' },
-  { id: 'done',    label: 'Done',    bg: 'bg-emerald-50',border: 'border-emerald-200',text: 'text-emerald-600',dot: 'bg-emerald-500' }
+  { 
+    id: 'backlog', 
+    label: 'Backlog', 
+    bg: 'bg-slate-900/40', 
+    border: 'border-slate-800/50', 
+    text: 'text-slate-400', 
+    dot: 'bg-slate-600',
+    accent: 'ring-slate-500/20'
+  },
+  { 
+    id: 'todo',    
+    label: 'To Do',   
+    bg: 'bg-indigo-900/20',   
+    border: 'border-indigo-500/20',   
+    text: 'text-indigo-400',  
+    dot: 'bg-indigo-500',
+    accent: 'ring-indigo-500/20'
+  },
+  { 
+    id: 'review',  
+    label: 'Review',  
+    bg: 'bg-orange-900/20',  
+    border: 'border-orange-500/20',  
+    text: 'text-orange-400', 
+    dot: 'bg-orange-500',
+    accent: 'ring-orange-500/20'
+  },
+  { 
+    id: 'done',    
+    label: 'Done',    
+    bg: 'bg-emerald-900/20',
+    border: 'border-emerald-500/20',
+    text: 'text-emerald-400',
+    dot: 'bg-emerald-500',
+    accent: 'ring-emerald-500/20'
+  }
 ];
 
 // --- ICONS ---
@@ -53,8 +88,6 @@ const Icons = {
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // [ROUTER CHANGE] We don't need activeBoard state anymore, the URL handles it.
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -71,16 +104,15 @@ export default function App() {
   }, []);
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-stone-50">
+    <div className="flex h-screen items-center justify-center bg-[#0B0D14]">
       <motion.div 
         animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        className="w-6 h-6 border-2 border-stone-300 border-t-stone-800 rounded-full"
+        transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+        className="w-8 h-8 border-4 border-indigo-900 border-t-indigo-500 rounded-full"
       />
     </div>
   );
 
-  // [ROUTER CHANGE] Using BrowserRouter and Routes
   return (
     <BrowserRouter>
       <Routes>
@@ -102,13 +134,10 @@ export default function App() {
 }
 
 // --- 1. BOARDS LIST COMPONENT ---
-// [ROUTER CHANGE] Removed 'onSelectBoard' prop
 function BoardList({ session }) {
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  
-  // [ROUTER CHANGE] Hook for navigation
   const navigate = useNavigate();
 
   const { user } = session;
@@ -163,103 +192,120 @@ function BoardList({ session }) {
 
   return (
     <motion.div 
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen bg-gradient-to-br from-stone-50 to-stone-100 p-8 font-sans text-stone-900"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="min-h-screen bg-[#0B0D14] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0B0D14] to-[#0B0D14] p-8 font-sans text-gray-100"
     >
-      <header className="flex items-center justify-between mb-12 max-w-6xl mx-auto">
+      <header className="flex items-center justify-between mb-16 max-w-7xl mx-auto pt-4">
         <div>
-           <h1 className="text-4xl font-extrabold tracking-tight text-stone-900">Projects</h1>
-           <p className="text-stone-500 mt-2 font-medium">Welcome back, {firstName}</p>
+           <motion.h1 
+             initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={SMOOTH_SPRING}
+             className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400"
+            >
+             Projects
+           </motion.h1>
+           <motion.p 
+             initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1, ...SMOOTH_SPRING }}
+             className="text-gray-500 mt-2 font-medium text-lg"
+            >
+              Let's build something great, {firstName}.
+            </motion.p>
         </div>
         
-        <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md p-2 pr-3 rounded-full border border-stone-200 shadow-sm">
+        <div className="flex items-center gap-4 bg-gray-900/50 backdrop-blur-xl p-2 pr-4 rounded-full border border-white/10 shadow-lg shadow-black/50">
            {avatarUrl ? (
              <img 
                src={avatarUrl} 
                referrerPolicy="no-referrer"
                alt="Profile" 
-               className="w-9 h-9 rounded-full border border-white shadow-sm object-cover" 
+               className="w-10 h-10 rounded-full border-2 border-gray-800 shadow-md object-cover" 
              />
            ) : (
-             <div className="w-9 h-9 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">
+             <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-black">
                 {displayUsername.charAt(0).toUpperCase()}
              </div>
            )}
            
-           <span className="text-sm font-semibold text-stone-600 hidden sm:block">@{displayUsername.replace(/\s+/g, '').toLowerCase().slice(0, 15)}</span>
+           <span className="text-sm font-bold text-gray-300 hidden sm:block">@{displayUsername.replace(/\s+/g, '').toLowerCase().slice(0, 15)}</span>
            
-           <div className="h-4 w-px bg-stone-300 mx-1"></div>
+           <div className="h-5 w-px bg-gray-700 mx-1"></div>
            
-           <button onClick={() => supabase.auth.signOut()} className="text-xs text-stone-500 hover:text-red-500 font-medium transition-colors">
-             Sign Out
+           <button onClick={() => supabase.auth.signOut()} className="text-xs text-gray-500 hover:text-red-400 font-bold uppercase tracking-wider transition-colors">
+             Log Out
            </button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <motion.div 
           layout
           onClick={() => setIsCreating(true)}
+          whileHover={{ scale: 1.02, backgroundColor: "rgba(30, 41, 59, 0.5)" }}
+          whileTap={{ scale: 0.98 }}
+          transition={SMOOTH_SPRING}
           className={cn(
-            "group relative flex flex-col items-center justify-center h-48 rounded-3xl border-2 border-dashed border-stone-300 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer",
-            isCreating && "border-blue-500 bg-white ring-4 ring-blue-500/10"
+            "group relative flex flex-col items-center justify-center h-56 rounded-[2rem] border-2 border-dashed border-gray-800 bg-gray-900/30 backdrop-blur-sm hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer",
+            isCreating && "border-indigo-500 bg-gray-900 ring-4 ring-indigo-500/10 shadow-2xl"
           )}
         >
           {isCreating ? (
-             <form onSubmit={createBoard} className="w-full px-8" onClick={e => e.stopPropagation()}>
+             <form onSubmit={createBoard} className="w-full px-10" onClick={e => e.stopPropagation()}>
                 <input 
                   autoFocus
                   placeholder="Project Name..." 
-                  className="w-full bg-transparent text-xl font-bold placeholder:text-stone-300 text-center outline-none"
+                  className="w-full bg-transparent text-2xl font-bold placeholder:text-gray-600 text-gray-100 text-center outline-none"
                   value={newBoardName}
                   onChange={e => setNewBoardName(e.target.value)}
                   onBlur={() => !newBoardName && setIsCreating(false)}
                 />
-                <p className="text-center text-xs text-blue-500 font-medium mt-2">Press Enter to create</p>
+                <p className="text-center text-xs text-indigo-400 font-bold uppercase tracking-wider mt-4 animate-pulse">Press Enter</p>
              </form>
           ) : (
              <>
-               <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-3 group-hover:bg-blue-100 group-hover:scale-110 transition-all duration-300">
-                  <Icons.Plus className="w-6 h-6 text-stone-400 group-hover:text-blue-600" />
+               <div className="w-16 h-16 rounded-2xl bg-gray-800/50 shadow-inner border border-white/5 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 group-hover:bg-gray-800">
+                  <Icons.Plus className="w-8 h-8 text-gray-500 group-hover:text-indigo-400 transition-colors" />
                </div>
-               <span className="font-semibold text-stone-500 group-hover:text-blue-700">Create New Board</span>
+               <span className="font-bold text-gray-500 group-hover:text-indigo-400 transition-colors">Create New Board</span>
              </>
           )}
         </motion.div>
 
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {boards.map((board, i) => (
             <motion.div 
               layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ delay: i * 0.05 }}
+              transition={{ delay: i * 0.05, ...SMOOTH_SPRING }}
+              whileHover={{ y: -8, scale: 1.02, shadow: "0 20px 40px -10px rgba(0, 0, 0, 0.5)" }}
+              whileTap={{ scale: 0.98 }}
               key={board.id} 
-              // [ROUTER CHANGE] Navigate to board route on click
               onClick={() => navigate(`/board/${board.id}`)}
-              className="group relative flex flex-col justify-between h-48 p-8 rounded-3xl bg-white shadow-[0_2px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-stone-100 hover:-translate-y-1 transition-all cursor-pointer overflow-hidden"
+              className="group relative flex flex-col justify-between h-56 p-8 rounded-[2rem] bg-[#161922] shadow-xl shadow-black/20 border border-white/5 hover:border-indigo-500/30 cursor-pointer overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-32 bg-gradient-to-br from-transparent to-stone-50 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-bl-[4rem] -mr-8 -mt-8 opacity-50 group-hover:scale-150 group-hover:opacity-100 transition-all duration-500 ease-out" />
               
-              <div>
-                <h3 className="text-2xl font-bold text-stone-800 tracking-tight group-hover:text-blue-600 transition-colors">{board.name}</h3>
-                <p className="text-sm text-stone-400 mt-1 font-medium">Last active {new Date(board.created_at).toLocaleDateString()}</p>
+              <div className="relative z-10">
+                <h3 className="text-2xl font-bold text-gray-200 tracking-tight group-hover:text-indigo-400 transition-colors">{board.name}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                   <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Active {new Date(board.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}</p>
+                </div>
               </div>
 
               <div className="flex justify-between items-end relative z-10">
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-3 pl-2">
                    {avatarUrl ? (
-                      <img src={avatarUrl} referrerPolicy="no-referrer" className="w-8 h-8 rounded-full border-2 border-white object-cover" alt="Owner" />
+                      <img src={avatarUrl} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border-[3px] border-[#161922] object-cover shadow-sm" alt="Owner" />
                    ) : (
-                      <div className="w-8 h-8 rounded-full border-2 border-white bg-stone-200 flex items-center justify-center text-[10px] font-bold text-stone-500">
+                      <div className="w-10 h-10 rounded-full border-[3px] border-[#161922] bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">
                         {displayUsername.charAt(0).toUpperCase()}
                       </div>
                    )}
                 </div>
                 <button 
                   onClick={(e) => deleteBoard(e, board.id)}
-                  className="text-stone-300 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded-xl"
+                  className="text-gray-600 hover:text-red-400 p-3 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-900/20 rounded-xl transform translate-y-4 group-hover:translate-y-0"
                 >
                   <Icons.Trash className="w-5 h-5" />
                 </button>
@@ -273,13 +319,11 @@ function BoardList({ session }) {
 }
 
 // --- 2. BOARD VIEW COMPONENT ---
-// [ROUTER CHANGE] Removed 'board' prop, we fetch it via URL now
 function BoardView({ session }) {
   const [tasks, setTasks] = useState([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [activeColumn, setActiveColumn] = useState(null);
   
-  // [ROUTER CHANGE] New state for the board data since we don't get it as a prop on refresh
   const [board, setBoard] = useState(null); 
   const { boardId } = useParams();
   const navigate = useNavigate();
@@ -292,12 +336,11 @@ function BoardView({ session }) {
     user.user_metadata?.username || 
     "User";
 
-  // [ROUTER CHANGE] Fetch board details on mount (handles page refresh)
   useEffect(() => {
     const getBoard = async () => {
         const { data } = await supabase.from('boards').select('*').eq('id', boardId).single();
         if(data) setBoard(data);
-        else navigate('/'); // Redirect if board doesn't exist
+        else navigate('/');
     };
     getBoard();
   }, [boardId, navigate]);
@@ -307,7 +350,6 @@ function BoardView({ session }) {
   }, [boardId]);
 
   const fetchTasks = async () => {
-    // [ROUTER CHANGE] Use boardId from params
     const { data } = await supabase
       .from('tasks')
       .select('*')
@@ -320,7 +362,6 @@ function BoardView({ session }) {
   const handleAddTask = async (columnId) => {
     if (!newTaskTitle.trim()) return;
 
-    // [ROUTER CHANGE] Use boardId from params
     const { data, error } = await supabase
       .from('tasks')
       .insert([{ 
@@ -353,75 +394,112 @@ function BoardView({ session }) {
     await supabase.from('tasks').delete().eq('id', id);
   };
 
-  // [ROUTER CHANGE] Show loading if board data isn't fetched yet
   if (!board) return (
-    <div className="flex h-screen items-center justify-center bg-[#FDFDFD]">
-        <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-800 rounded-full animate-spin"></div>
+    <div className="flex h-screen items-center justify-center bg-[#0B0D14]">
+        <motion.div 
+           initial={{ scale: 0 }} animate={{ scale: 1 }} 
+           className="w-10 h-10 border-4 border-indigo-900 border-t-indigo-500 rounded-full animate-spin" 
+        />
     </div>
   );
 
   return (
     <motion.div 
-      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-      className="flex flex-col h-screen bg-[#FDFDFD] text-stone-900 font-sans"
+      initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }}
+      transition={{ type: "tween", duration: 0.3 }}
+      className="flex flex-col h-screen bg-[#0B0D14] text-gray-100 font-sans overflow-hidden"
     >
-      <header className="flex-none flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-xl border-b border-stone-100 z-50 sticky top-0">
+      {/* HEADER */}
+      <header className="flex-none flex items-center justify-between px-8 py-5 bg-[#0B0D14]/80 backdrop-blur-xl border-b border-white/5 shadow-sm z-50">
         <div className="flex items-center gap-6">
-          {/* [ROUTER CHANGE] onBack uses navigate('/') */}
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-stone-100 rounded-xl text-stone-500 transition-colors group">
-            <Icons.Back className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+          <button 
+             onClick={() => navigate('/')} 
+             className="p-3 hover:bg-gray-800 rounded-2xl text-gray-500 hover:text-gray-200 transition-all group active:scale-95"
+          >
+            <Icons.Back className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
           <div>
-             <h1 className="text-2xl font-bold tracking-tight text-stone-800 leading-none">{board.name}</h1>
-             <span className="text-xs font-semibold text-stone-400 tracking-wider uppercase">Board View</span>
+             <motion.h1 
+                initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                className="text-3xl font-black tracking-tight text-gray-100 leading-none"
+             >
+                {board.name}
+             </motion.h1>
+             <div className="flex items-center gap-2 mt-1">
+                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+                 <span className="text-[10px] font-bold text-gray-500 tracking-widest uppercase">Live Board</span>
+             </div>
           </div>
         </div>
         
-        <div className="relative group cursor-pointer flex items-center gap-3">
-           <span className="hidden sm:block text-xs font-bold text-stone-400">{displayUsername}</span>
-           {avatarUrl ? (
-             <img src={avatarUrl} referrerPolicy="no-referrer" alt="User" className="h-9 w-9 rounded-full border border-stone-200 shadow-sm object-cover" />
-           ) : (
-             <div className="h-9 w-9 bg-gradient-to-br from-stone-700 to-black rounded-full shadow-lg flex items-center justify-center text-white font-bold text-xs">
-               {session.user.email.charAt(0).toUpperCase()}
-             </div>
-           )}
+        <div className="flex items-center gap-4">
+           <div className="hidden md:flex items-center gap-2">
+               {[1,2].map(i => (
+                  <div key={i} className={`w-8 h-8 rounded-full border-2 border-[#0B0D14] bg-indigo-${i+6}00 flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-1 ring-white/10`}>
+                      {i === 1 ? 'A' : 'M'}
+                  </div>
+               ))}
+           </div>
+           <div className="h-8 w-px bg-gray-800 mx-2"></div>
+           <div className="flex items-center gap-3">
+             <span className="hidden sm:block text-xs font-bold text-gray-400">{displayUsername}</span>
+             {avatarUrl ? (
+               <img src={avatarUrl} referrerPolicy="no-referrer" alt="User" className="h-10 w-10 rounded-full border-2 border-[#0B0D14] ring-1 ring-white/10 shadow-md object-cover" />
+             ) : (
+               <div className="h-10 w-10 bg-gradient-to-br from-indigo-700 to-purple-800 rounded-full shadow-lg flex items-center justify-center text-white font-bold text-xs ring-1 ring-white/20">
+                 {session.user.email.charAt(0).toUpperCase()}
+               </div>
+             )}
+           </div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-x-auto overflow-y-hidden p-8">
+      {/* KANBAN BOARD */}
+      <main className="flex-1 overflow-x-auto overflow-y-hidden p-8 bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:20px_20px]">
         <div className="flex h-full gap-8 min-w-max">
           <LayoutGroup>
-            {WORKFLOW.map((col) => (
-              <div key={col.id} className="flex flex-col w-80 h-full select-none">
-                <div className="flex items-center justify-between mb-4 px-1">
+            {WORKFLOW.map((col, i) => (
+              <motion.div 
+                key={col.id} 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1, ...SMOOTH_SPRING }}
+                className="flex flex-col w-80 h-full select-none"
+              >
+                {/* Column Header */}
+                <div className="flex items-center justify-between mb-4 px-2">
                    <div className="flex items-center gap-3">
-                      <span className={cn("block w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm", col.dot)}></span> 
-                      <h2 className="text-sm font-bold uppercase tracking-wider text-stone-600">{col.label}</h2>
-                      <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md">
+                      <span className={cn("block w-3 h-3 rounded-full ring-4 ring-opacity-20 shadow-sm", col.dot, col.accent)}></span> 
+                      <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">{col.label}</h2>
+                      <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg border border-opacity-10", col.bg, col.text, col.border)}>
                         {tasks.filter(t => t.status === col.id).length}
                       </span>
                    </div>
-                   <button onClick={() => setActiveColumn(col.id)} className="text-stone-300 hover:text-stone-800 hover:bg-stone-100 p-1 rounded-lg transition-all">
+                   <button 
+                      onClick={() => setActiveColumn(col.id)} 
+                      className={cn("p-1.5 rounded-lg transition-all hover:bg-gray-800 hover:shadow-sm", col.text)}
+                   >
                       <Icons.Plus className="w-5 h-5" />
                    </button>
                 </div>
 
-                <div className={cn("flex-1 rounded-3xl p-3 space-y-3 overflow-y-auto border border-transparent transition-colors", col.bg)}>
+                {/* Drop Zone / Task Container */}
+                <div className={cn("flex-1 rounded-[2rem] p-3 space-y-3 overflow-y-auto border backdrop-blur-md shadow-inner transition-colors", col.bg, col.border)}>
                   <AnimatePresence>
                     {activeColumn === col.id && (
                       <motion.div 
-                        initial={{ opacity: 0, y: -10, height: 0 }} 
-                        animate={{ opacity: 1, y: 0, height: 'auto' }}
-                        exit={{ opacity: 0, y: -10, height: 0 }}
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }} 
+                        animate={{ opacity: 1, height: 'auto', marginBottom: 12 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        transition={SMOOTH_SPRING}
                         className="overflow-hidden"
                       >
-                        <div className="bg-white p-4 rounded-2xl shadow-xl ring-1 ring-black/5 mx-1 mb-2">
+                        <div className="bg-[#1E293B] p-4 rounded-2xl shadow-2xl ring-1 ring-indigo-500/30 mx-1">
                           <textarea 
                             autoFocus
-                            placeholder="Type task..."
-                            className="w-full resize-none outline-none text-sm placeholder:text-stone-300 text-stone-700 font-medium"
-                            rows={2}
+                            placeholder="What needs to be done?"
+                            className="w-full resize-none outline-none text-sm placeholder:text-gray-600 text-gray-200 bg-transparent font-medium"
+                            rows={3}
                             value={newTaskTitle}
                             onChange={e => setNewTaskTitle(e.target.value)}
                             onKeyDown={e => {
@@ -431,36 +509,41 @@ function BoardView({ session }) {
                               }
                             }}
                           />
-                          <div className="flex justify-end gap-2 mt-3 pt-2 border-t border-stone-50">
-                             <button onClick={() => setActiveColumn(null)} className="text-xs text-stone-500 hover:text-stone-800 font-semibold px-2">Cancel</button>
-                             <button onClick={() => handleAddTask(col.id)} className="text-xs bg-stone-900 text-white px-4 py-1.5 rounded-lg font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">Add Card</button>
+                          <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-700">
+                             <button onClick={() => setActiveColumn(null)} className="text-xs text-gray-500 hover:text-gray-300 font-bold px-2 py-1">Cancel</button>
+                             <button onClick={() => handleAddTask(col.id)} className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg font-bold shadow-lg shadow-indigo-900/50 transition-all active:scale-95">Add</button>
                           </div>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <AnimatePresence mode="popLayout">
+                  <AnimatePresence>
                     {tasks.filter(t => t.status === col.id).map(task => (
                       <motion.div 
                         layoutId={task.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                        layout="position"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={SMOOTH_SPRING}
+                        whileHover={{ y: -4, scale: 1.02, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.5)" }}
+                        whileTap={{ scale: 0.98 }}
                         key={task.id} 
-                        className="group bg-white p-5 rounded-2xl shadow-sm hover:shadow-lg border border-stone-100 transition-all cursor-default"
+                        className="group bg-[#161922] p-5 rounded-2xl shadow-md shadow-black/30 border border-gray-800 transition-all cursor-default relative overflow-hidden"
                       >
-                        <p className="text-sm font-semibold text-stone-700 leading-relaxed">{task.title}</p>
+                        <div className={cn("absolute left-0 top-0 bottom-0 w-1", col.dot)} />
                         
-                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-dashed border-stone-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                           <button onClick={() => moveTask(task, 'prev')} disabled={col.id === 'backlog'} className="p-1.5 rounded-md hover:bg-stone-50 text-stone-400 hover:text-stone-800 disabled:opacity-0 transition-colors">
+                        <p className="text-sm font-semibold text-gray-300 leading-relaxed pl-2 group-hover:text-white transition-colors">{task.title}</p>
+                        
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-dashed border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pl-2">
+                           <button onClick={() => moveTask(task, 'prev')} disabled={col.id === 'backlog'} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-600 hover:text-indigo-400 disabled:opacity-0 transition-colors">
                               <Icons.ArrowLeft className="w-4 h-4" />
                            </button>
-                           <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded-md hover:bg-red-50 text-stone-300 hover:text-red-500 transition-colors">
+                           <button onClick={() => deleteTask(task.id)} className="p-1.5 rounded-lg hover:bg-red-900/20 text-gray-600 hover:text-red-400 transition-colors">
                               <Icons.Trash className="w-3.5 h-3.5" />
                            </button>
-                           <button onClick={() => moveTask(task, 'next')} disabled={col.id === 'done'} className="p-1.5 rounded-md hover:bg-stone-50 text-stone-400 hover:text-stone-800 disabled:opacity-0 transition-colors">
+                           <button onClick={() => moveTask(task, 'next')} disabled={col.id === 'done'} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-600 hover:text-indigo-400 disabled:opacity-0 transition-colors">
                               <Icons.ArrowRight className="w-4 h-4" />
                            </button>
                         </div>
@@ -468,7 +551,7 @@ function BoardView({ session }) {
                     ))}
                   </AnimatePresence>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </LayoutGroup>
         </div>
@@ -513,28 +596,43 @@ function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-100 p-6 font-sans relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-200/50 rounded-full blur-[100px] mix-blend-multiply animate-blob" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-200/50 rounded-full blur-[100px] mix-blend-multiply animate-blob animation-delay-2000" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0B0D14] p-6 font-sans relative overflow-hidden">
+      {/* Animated Blobs (Glow effects) */}
+      <motion.div 
+         animate={{ rotate: 360, scale: [1, 1.1, 1] }} 
+         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+         className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[120px] mix-blend-screen" 
+      />
+      <motion.div 
+         animate={{ rotate: -360, scale: [1, 1.2, 1] }} 
+         transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+         className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] mix-blend-screen" 
+      />
+      <div className="absolute top-[20%] right-[20%] w-[300px] h-[300px] bg-pink-600/20 rounded-full blur-[100px] mix-blend-screen animate-pulse" />
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white/70 backdrop-blur-2xl p-10 rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.08)] border border-white/50 relative z-10"
+        initial={{ opacity: 0, y: 30, scale: 0.95 }} 
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", duration: 0.8 }}
+        className="w-full max-w-md bg-[#161922]/80 backdrop-blur-2xl p-10 rounded-[3rem] shadow-2xl shadow-black/50 border border-white/5 relative z-10"
       >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-stone-900 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white shadow-xl">
-             <Icons.User className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl font-extrabold text-stone-800 tracking-tight">{isLogin ? "Welcome Back" : "Join Project"}</h1>
-          <p className="text-stone-400 text-sm font-medium mt-2">{isLogin ? "Enter your details to access workspace" : "Create your unique username"}</p>
+        <div className="text-center mb-10">
+          <motion.div 
+            whileHover={{ rotate: 10, scale: 1.1 }}
+            className="w-20 h-20 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30"
+          >
+             <Icons.User className="w-10 h-10" />
+          </motion.div>
+          <h1 className="text-4xl font-black text-white tracking-tighter mb-2">{isLogin ? "Welcome Back" : "Join Project"}</h1>
+          <p className="text-gray-400 font-medium">{isLogin ? "Enter details to access workspace" : "Create your unique username"}</p>
         </div>
 
-        <div className="space-y-3 mb-6">
+        <div className="space-y-4 mb-8">
           <motion.button
             onClick={() => handleOAuthLogin('google')}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }} whileTap={{ scale: 0.98 }}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 p-4 rounded-2xl font-bold shadow-sm transition-all"
+            className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:border-indigo-500/50 text-gray-200 p-4 rounded-2xl font-bold shadow-sm transition-all"
           >
             <Icons.Google className="w-5 h-5" />
             <span>Continue with Google</span>
@@ -542,42 +640,42 @@ function AuthScreen() {
 
           <motion.button
             onClick={() => handleOAuthLogin('github')}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.02, backgroundColor: "#000" }} whileTap={{ scale: 0.98 }}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-[#24292F] hover:bg-[#2b3137] text-white p-4 rounded-2xl font-bold shadow-lg shadow-stone-900/10 transition-all"
+            className="w-full flex items-center justify-center gap-3 bg-black text-white p-4 rounded-2xl font-bold shadow-xl shadow-black/20 transition-all border border-gray-800"
           >
             <Icons.Github className="w-5 h-5 fill-current" />
             <span>Continue with GitHub</span>
           </motion.button>
         </div>
 
-        <div className="relative flex py-2 items-center mb-6">
-            <div className="flex-grow border-t border-stone-300"></div>
-            <span className="flex-shrink mx-4 text-stone-400 text-xs font-bold uppercase tracking-wider">Or use username</span>
-            <div className="flex-grow border-t border-stone-300"></div>
+        <div className="relative flex py-2 items-center mb-8 opacity-50">
+            <div className="flex-grow border-t border-gray-700"></div>
+            <span className="flex-shrink mx-4 text-gray-500 text-[10px] font-black uppercase tracking-widest">Or continue with</span>
+            <div className="flex-grow border-t border-gray-700"></div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-             <label className="text-xs font-bold text-stone-500 ml-4 uppercase tracking-wider">Username</label>
-             <input className="w-full p-4 bg-stone-50/50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-stone-900/10 focus:bg-white transition-all font-semibold text-stone-800" placeholder="johndoe" value={username} onChange={e=>setUsername(e.target.value)} required />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2 group">
+             <label className="text-xs font-bold text-gray-500 ml-4 uppercase tracking-wider group-focus-within:text-indigo-400 transition-colors">Username</label>
+             <input className="w-full p-4 bg-[#0B0D14]/50 border border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:bg-[#0B0D14] transition-all font-bold text-gray-200" placeholder="johndoe" value={username} onChange={e=>setUsername(e.target.value)} required />
           </div>
-          <div className="space-y-1">
-             <label className="text-xs font-bold text-stone-500 ml-4 uppercase tracking-wider">Password</label>
-             <input className="w-full p-4 bg-stone-50/50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-stone-900/10 focus:bg-white transition-all font-semibold text-stone-800" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
+          <div className="space-y-2 group">
+             <label className="text-xs font-bold text-gray-500 ml-4 uppercase tracking-wider group-focus-within:text-indigo-400 transition-colors">Password</label>
+             <input className="w-full p-4 bg-[#0B0D14]/50 border border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 focus:bg-[#0B0D14] transition-all font-bold text-gray-200" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
           </div>
           
           <motion.button 
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(79, 70, 229, 0.4)" }} whileTap={{ scale: 0.95 }}
             disabled={loading} 
-            className="w-full bg-stone-100 hover:bg-stone-200 text-stone-900 border border-stone-200 p-4 rounded-2xl font-bold shadow-sm disabled:opacity-70 mt-4 transition-colors"
+            className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4 rounded-2xl font-bold shadow-lg shadow-indigo-900/20 disabled:opacity-70 mt-4 transition-all"
           >
             {loading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
           </motion.button>
         </form>
 
         <div className="mt-8 text-center">
-          <button onClick={()=>setIsLogin(!isLogin)} className="text-sm font-semibold text-stone-400 hover:text-stone-800 transition-colors">
+          <button onClick={()=>setIsLogin(!isLogin)} className="text-sm font-bold text-gray-500 hover:text-indigo-400 transition-colors">
             {isLogin ? "No account? Create one" : "Already have an account?"}
           </button>
         </div>
