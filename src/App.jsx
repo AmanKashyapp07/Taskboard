@@ -506,13 +506,7 @@ function BoardView({ session }) {
         </div>
         
         <div className="flex items-center gap-4">
-           <div className="hidden md:flex items-center gap-2">
-               {[1,2].map(i => (
-                  <div key={i} className={`w-8 h-8 rounded-full border-2 border-[#0B0D14] bg-indigo-${i+6}00 flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-1 ring-white/10`}>
-                      {i === 1 ? 'A' : 'M'}
-                  </div>
-               ))}
-           </div>
+           
            <div className="h-8 w-px bg-gray-800 mx-2"></div>
            <div className="flex items-center gap-3">
              <span className="hidden sm:block text-xs font-bold text-gray-400">{displayUsername}</span>
