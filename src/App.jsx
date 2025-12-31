@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+/** * SUPABASE CLIENT IMPORT
+ * This library replaces the need for axios/fetch calls to a custom backend.
+ * It acts as your API client, Authentication handler, and Database connector all in one.
+ */
 import { createClient } from "@supabase/supabase-js";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { clsx } from "clsx";
@@ -11,10 +15,15 @@ function cn(...inputs) {
 }
 
 // --- ANIMATION CONSTANTS (SMOOTHER) ---
-// Lower stiffness = softer, slower slide. Higher damping = less bouncy.
 const SMOOTH_SPRING = { type: "spring", stiffness: 150, damping: 25, mass: 1 };
 
 // --- CONFIGURATION ---
+/**
+ * INITIALIZATION
+ * Connects your frontend directly to your Postgres database hosted on Supabase.
+ * The 'ANON_KEY' is safe to expose in the browser because Supabase uses 
+ * Row Level Security (RLS) policies in the database to restrict what this key can do.
+ */
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -90,11 +99,21 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    /**
+     * CHECK SESSION
+     * This checks LocalStorage to see if the user is already logged in.
+     * Traditional Backend: You would check for a 'token' cookie or JWT in a header.
+     */
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
+    /**
+     * REAL-TIME AUTH LISTENER
+     * This is a listener (like a WebSocket) that waits for auth events.
+     * If the user signs out in another tab, or their token expires, this triggers automatically.
+     */
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setLoading(false);
@@ -156,6 +175,14 @@ function BoardList({ session }) {
   useEffect(() => { fetchBoards(); }, []);
 
   const fetchBoards = async () => {
+    /**
+     * FETCH DATA (READ)
+     * Traditional Backend: GET /api/boards
+     * SQL: SELECT * FROM boards ORDER BY created_at DESC;
+     * * .from('boards'): target the table
+     * .select('*'): get all columns
+     * .order(...): sort results
+     */
     const { data, error } = await supabase
       .from('boards')
       .select('*')
@@ -168,10 +195,15 @@ function BoardList({ session }) {
     e.preventDefault();
     if (!newBoardName.trim()) return;
 
+    /**
+     * INSERT DATA (CREATE)
+     * Traditional Backend: POST /api/boards (body: { name, user_id })
+     * SQL: INSERT INTO boards (name, user_id) VALUES ('My Board', '123') RETURNING *;
+     */
     const { data, error } = await supabase
       .from('boards')
       .insert([{ name: newBoardName, user_id: session.user.id }])
-      .select();
+      .select(); // .select() returns the newly created item so we can add it to state
 
     if (!error) {
       setBoards([data[0], ...boards]);
@@ -184,7 +216,19 @@ function BoardList({ session }) {
     e.stopPropagation();
     if (!window.confirm("Delete this board?")) return;
 
+    /**
+     * DELETE DATA (CASCADE)
+     * 1. Delete tasks first (Manual Cascade)
+     * Traditional Backend: DELETE /api/boards/:id/tasks
+     * SQL: DELETE FROM tasks WHERE board_id = 'abc';
+     */
     await supabase.from('tasks').delete().eq('board_id', id); 
+    
+    /**
+     * 2. Delete the board
+     * Traditional Backend: DELETE /api/boards/:id
+     * SQL: DELETE FROM boards WHERE id = 'abc';
+     */
     await supabase.from('boards').delete().eq('id', id);
 
     setBoards(boards.filter(b => b.id !== id));
@@ -338,6 +382,11 @@ function BoardView({ session }) {
 
   useEffect(() => {
     const getBoard = async () => {
+        /**
+         * FETCH SINGLE ROW
+         * Traditional Backend: GET /api/boards/:id
+         * SQL: SELECT * FROM boards WHERE id = :boardId LIMIT 1;
+         */
         const { data } = await supabase.from('boards').select('*').eq('id', boardId).single();
         if(data) setBoard(data);
         else navigate('/');
@@ -350,6 +399,11 @@ function BoardView({ session }) {
   }, [boardId]);
 
   const fetchTasks = async () => {
+    /**
+     * FILTERED FETCH
+     * Traditional Backend: GET /api/tasks?board_id=:boardId
+     * SQL: SELECT * FROM tasks WHERE board_id = :boardId ORDER BY created_at ASC;
+     */
     const { data } = await supabase
       .from('tasks')
       .select('*')
@@ -362,6 +416,11 @@ function BoardView({ session }) {
   const handleAddTask = async (columnId) => {
     if (!newTaskTitle.trim()) return;
 
+    /**
+     * INSERT TASK
+     * Traditional Backend: POST /api/tasks
+     * SQL: INSERT INTO tasks (title, user_id, board_id, status) VALUES (...) RETURNING *;
+     */
     const { data, error } = await supabase
       .from('tasks')
       .insert([{ 
@@ -385,12 +444,26 @@ function BoardView({ session }) {
     if (nextIndex < 0 || nextIndex >= WORKFLOW.length) return;
 
     const newStatus = WORKFLOW[nextIndex].id;
+    // Optimistic Update (Update UI instantly)
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+    
+    /**
+     * UPDATE ROW
+     * Traditional Backend: PUT /api/tasks/:id
+     * SQL: UPDATE tasks SET status = :newStatus WHERE id = :taskId;
+     */
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
   };
 
   const deleteTask = async (id) => {
+    // Optimistic Update (Remove from UI instantly)
     setTasks(prev => prev.filter(t => t.id !== id));
+    
+    /**
+     * DELETE ROW
+     * Traditional Backend: DELETE /api/tasks/:id
+     * SQL: DELETE FROM tasks WHERE id = :taskId;
+     */
     await supabase.from('tasks').delete().eq('id', id);
   };
 
@@ -569,6 +642,11 @@ function AuthScreen() {
 
   const handleOAuthLogin = async (provider) => {
     setLoading(true);
+    /**
+     * OAUTH LOGIN
+     * Redirects the user to Google/GitHub to sign in.
+     * Supabase handles the callback and session creation automatically.
+     */
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provider,
     });
@@ -583,6 +661,11 @@ function AuthScreen() {
     setLoading(true);
     const fakeEmail = `${username.trim().toLowerCase()}@board.local`; 
 
+    /**
+     * PASSWORD LOGIN / SIGNUP
+     * Uses Supabase's built-in email/password handler.
+     * Traditional Backend: POST /api/login or POST /api/register
+     */
     const { error } = isLogin 
       ? await supabase.auth.signInWithPassword({ email: fakeEmail, password })
       : await supabase.auth.signUp({ 
