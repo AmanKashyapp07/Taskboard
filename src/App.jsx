@@ -619,4 +619,3 @@ function AuthScreen() {
   );
 }
 
-//comment
